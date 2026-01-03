@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Random Movie Generator</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' font-weight='bold' fill='%23D3D3D3'>🎬</text></svg>">
     <link href="styles.css" rel="stylesheet">
 </head>
 <body>
@@ -11,34 +12,46 @@
         <h1>Random Movie Generator</h1>
     </header>
     <main>
-        
-        <h2 id="movieTitle"></h2>
-        <p id="director"></p>
-        <img id="poster" style="display:none; max-width:185px; border-radius:4px;" />
-        <button id="generateBtn" style="background-color: #D3D3D3; color: #1E1E1E; border: none;">GENERATE MOVIE</button>
+        <div class="container">
+            <div class="content">
+                <img id="poster" class="poster" style="display:none;" />
+                <div class="info">
+                    <h2 id="movieTitle"></h2>
+                    <p id="director"></p>
+                </div>
+            </div>
+            <button id="generateBtn">GENERATE MOVIE</button>
+        </div>
         
         <script>
             document.getElementById('generateBtn').onclick = async function() {
-                const response = await fetch('/api/random');
-                const data = await response.json();
-                const year = data.release_date ? data.release_date.split('-')[0] : '';
-
-                document.getElementById('movieTitle').textContent = year ? `${data.title} (${year})` : data.title;
-
-                
-                document.getElementById('director').textContent =
-                data.director ? `Director: ${data.director}` : '';
-
-
-                const posterEl = document.getElementById('poster');
-                
-                if (data.poster_url) {
-                    posterEl.src = data.poster_url;
-                    posterEl.style.display = 'block';
-                    } else {
-                    posterEl.style.display = 'none';
+                try {
+                    const response = await fetch('/api/random');
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        alert(`Error: ${errorData.error || 'Failed to fetch movie'}`);
+                        return;
                     }
+                    
+                    const data = await response.json();
+                    const year = data.release_date ? data.release_date.split('-')[0] : '';
 
+                    document.getElementById('movieTitle').textContent = year ? `${data.title} (${year})` : data.title;
+                    document.getElementById('director').textContent = data.director ? `Director: ${data.director}` : '';
+
+                    const posterEl = document.getElementById('poster');
+                    
+                    if (data.poster_url) {
+                        posterEl.src = data.poster_url;
+                        posterEl.style.display = 'block';
+                    } else {
+                        posterEl.style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to fetch movie. Check console for details.');
+                }
             };
         </script>
 
