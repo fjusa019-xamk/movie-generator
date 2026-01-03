@@ -13,20 +13,229 @@
     </header>
     <main>
         <div class="container">
+            <!-- Filters Section -->
+            <div class="filters-grid">
+                <!-- Year Range Slider Filter -->
+                <div class="filter-section">
+                    <label>Year Range</label>
+                    <div class="slider-wrapper">
+                        <div class="dual-slider">
+                            <div class="slider-track">
+                                <div class="slider-range" id="yearRange"></div>
+                            </div>
+                            <input type="range" id="yearSliderMin" class="year-slider slider-min" min="1950" max="2026" value="1950" />
+                            <input type="range" id="yearSliderMax" class="year-slider slider-max" min="1950" max="2026" value="2026" />
+                        </div>
+                        <div class="slider-labels">
+                            <span class="slider-min-label" id="minYearLabel">1950</span>
+                            <span class="slider-value" id="yearValue">All Years</span>
+                            <span class="slider-max-label" id="maxYearLabel">2026</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rating Range Slider Filter -->
+                <div class="filter-section">
+                    <label>IMDb Rating</label>
+                    <div class="slider-wrapper">
+                        <div class="dual-slider">
+                            <div class="slider-track">
+                                <div class="slider-range" id="ratingRange"></div>
+                            </div>
+                            <input type="range" id="ratingSliderMin" class="rating-slider slider-min" min="0" max="10" step="0.1" value="0" />
+                            <input type="range" id="ratingSliderMax" class="rating-slider slider-max" min="0" max="10" step="0.1" value="10" />
+                        </div>
+                        <div class="slider-labels">
+                            <span class="slider-min-label" id="minRatingLabel">0.0</span>
+                            <span class="slider-value" id="ratingValue">All Ratings</span>
+                            <span class="slider-max-label" id="maxRatingLabel">10.0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Movie Display -->
             <div class="content">
                 <img id="poster" class="poster" style="display:none;" />
                 <div class="info">
                     <h2 id="movieTitle"></h2>
                     <p id="director"></p>
+                    
+                    <!-- Ratings Section -->
+                    <div class="ratings-container">
+                        <div class="rating-card imdb">
+                            <div class="rating-source">IMDb</div>
+                            <div class="rating-value" id="imdbRating">-</div>
+                        </div>
+                        <div class="rating-card rotten-tomatoes">
+                            <div class="rating-source">Rotten Tomatoes</div>
+                            <div class="rating-value" id="rtRating">-</div>
+                        </div>
+                        <div class="rating-card metacritic">
+                            <div class="rating-source">Metacritic</div>
+                            <div class="rating-value" id="metacriticRating">-</div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <button id="generateBtn">GENERATE MOVIE</button>
         </div>
         
         <script>
-            document.getElementById('generateBtn').onclick = async function() {
+            const yearSliderMin = document.getElementById('yearSliderMin');
+            const yearSliderMax = document.getElementById('yearSliderMax');
+            const minYearLabel = document.getElementById('minYearLabel');
+            const maxYearLabel = document.getElementById('maxYearLabel');
+            const yearValue = document.getElementById('yearValue');
+            
+            const ratingSliderMin = document.getElementById('ratingSliderMin');
+            const ratingSliderMax = document.getElementById('ratingSliderMax');
+            const minRatingLabel = document.getElementById('minRatingLabel');
+            const maxRatingLabel = document.getElementById('maxRatingLabel');
+            const ratingValue = document.getElementById('ratingValue');
+            
+            const generateBtn = document.getElementById('generateBtn');
+
+            // Update year slider display values and fill
+            function updateYearLabels() {
+                const min = parseInt(yearSliderMin.value);
+                const max = parseInt(yearSliderMax.value);
+                
+                minYearLabel.textContent = min;
+                maxYearLabel.textContent = max;
+                
+                if (min === 1950 && max === 2026) {
+                    yearValue.textContent = 'All Years';
+                } else if (min === max) {
+                    yearValue.textContent = min;
+                } else {
+                    yearValue.textContent = `${min} — ${max}`;
+                }
+                
+                // Update range fill
+                const yearRange = document.getElementById('yearRange');
+                const percentMin = ((min - 1950) / (2026 - 1950)) * 100;
+                const percentMax = ((max - 1950) / (2026 - 1950)) * 100;
+                yearRange.style.left = percentMin + '%';
+                yearRange.style.width = (percentMax - percentMin) + '%';
+            }
+
+            // Update rating slider display values and fill
+            function updateRatingLabels() {
+                const min = parseFloat(ratingSliderMin.value);
+                const max = parseFloat(ratingSliderMax.value);
+                
+                minRatingLabel.textContent = min.toFixed(1);
+                maxRatingLabel.textContent = max.toFixed(1);
+                
+                if (min === 0 && max === 10) {
+                    ratingValue.textContent = 'All Ratings';
+                } else if (min === max) {
+                    ratingValue.textContent = min.toFixed(1);
+                } else {
+                    ratingValue.textContent = `${min.toFixed(1)} — ${max.toFixed(1)}`;
+                }
+                
+                // Update range fill
+                const ratingRange = document.getElementById('ratingRange');
+                const percentMin = (min / 10) * 100;
+                const percentMax = (max / 10) * 100;
+                ratingRange.style.left = percentMin + '%';
+                ratingRange.style.width = (percentMax - percentMin) + '%';
+            }
+
+            yearSliderMin.addEventListener('input', function() {
+                if (parseInt(this.value) > parseInt(yearSliderMax.value)) {
+                    this.value = yearSliderMax.value;
+                }
+                updateYearLabels();
+            });
+
+            yearSliderMax.addEventListener('input', function() {
+                if (parseInt(this.value) < parseInt(yearSliderMin.value)) {
+                    this.value = yearSliderMin.value;
+                }
+                updateYearLabels();
+            });
+
+            ratingSliderMin.addEventListener('input', function() {
+                if (parseFloat(this.value) > parseFloat(ratingSliderMax.value)) {
+                    this.value = ratingSliderMax.value;
+                }
+                updateRatingLabels();
+            });
+
+            ratingSliderMax.addEventListener('input', function() {
+                if (parseFloat(this.value) < parseFloat(ratingSliderMin.value)) {
+                    this.value = ratingSliderMin.value;
+                }
+                updateRatingLabels();
+            });
+
+            // Initialize labels
+            updateYearLabels();
+            updateRatingLabels();
+
+            function formatRating(rating, source) {
+                if (!rating) return null;
+                if (source === 'Rotten Tomatoes') {
+                    return rating.replace('%', '') + '%';
+                } else if (source === 'Metacritic') {
+                    return rating.split('/')[0];
+                } else if (source === 'Internet Movie Database') {
+                    return rating.split('/')[0];
+                }
+                return rating;
+            }
+
+            function displayRatings(ratings) {
+                const imdbRating = ratings?.find(r => r.Source === 'Internet Movie Database');
+                const imdbValue = imdbRating ? formatRating(imdbRating.Value, 'Internet Movie Database') : null;
+
+                // Clear existing rating cards
+                const container = document.querySelector('.ratings-container');
+                container.innerHTML = '';
+
+                // Add IMDb rating if available (only show IMDb)
+                if (imdbValue) {
+                    const card = document.createElement('div');
+                    card.className = 'rating-card imdb-featured';
+                    card.innerHTML = `<div class="rating-source">IMDb Rating</div><div class="rating-value">${imdbValue}</div><div class="rating-stars">★★★★★</div>`;
+                    container.appendChild(card);
+                }
+
+                // Trigger animation after a short delay
+                setTimeout(() => {
+                    document.querySelectorAll('.rating-card').forEach(card => {
+                        card.classList.add('appear');
+                    });
+                }, 50);
+            }
+
+            generateBtn.onclick = async function() {
+                generateBtn.disabled = true;
+                generateBtn.textContent = 'LOADING...';
+                
                 try {
-                    const response = await fetch('/api/random');
+                    const minYear = parseInt(yearSliderMin.value);
+                    const maxYear = parseInt(yearSliderMax.value);
+                    const minRating = parseFloat(ratingSliderMin.value);
+                    const maxRating = parseFloat(ratingSliderMax.value);
+                    
+                    let url = '/api/random?';
+                    const params = [];
+                    
+                    if (minYear !== 1950 || maxYear !== 2026) {
+                        params.push(`yearMin=${minYear}&yearMax=${maxYear}`);
+                    }
+                    
+                    if (minRating !== 0 || maxRating !== 10) {
+                        params.push(`ratingMin=${minRating}&ratingMax=${maxRating}`);
+                    }
+                    
+                    url += params.join('&');
+                    
+                    const response = await fetch(url);
                     
                     if (!response.ok) {
                         const errorData = await response.json();
@@ -35,9 +244,9 @@
                     }
                     
                     const data = await response.json();
-                    const year = data.release_date ? data.release_date.split('-')[0] : '';
+                    const movieYear = data.release_date ? data.release_date.split('-')[0] : '';
 
-                    document.getElementById('movieTitle').textContent = year ? `${data.title} (${year})` : data.title;
+                    document.getElementById('movieTitle').textContent = movieYear ? `${data.title} (${movieYear})` : data.title;
                     document.getElementById('director').textContent = data.director ? `Director: ${data.director}` : '';
 
                     const posterEl = document.getElementById('poster');
@@ -45,14 +254,25 @@
                     if (data.poster_url) {
                         posterEl.src = data.poster_url;
                         posterEl.style.display = 'block';
+                        
+                        // Display ratings after image loads
+                        posterEl.onload = function() {
+                            displayRatings(data.ratings);
+                        };
                     } else {
                         posterEl.style.display = 'none';
+                        displayRatings(data.ratings);
                     }
                 } catch (error) {
                     console.error('Error:', error);
                     alert('Failed to fetch movie. Check console for details.');
+                } finally {
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'GENERATE MOVIE';
                 }
             };
+
+            // Initialize on page load
         </script>
 
     </main>
