@@ -26,6 +26,7 @@
     }
     
     console.log('TMDB_API_KEY loaded:', process.env.TMDB_API_KEY ? 'YES' : 'NO');
+    console.log('OMDB_API_KEY loaded:', process.env.OMDB_API_KEY ? 'YES' : 'NO');
 
     const app : express.Application = express();
     const portti : number = Number(process.env.PORT) || 3000;
@@ -51,9 +52,14 @@
     });
 
     // RANDOM
-    app.get('/api/random', async (_req: express.Request, res: express.Response) => {
+    app.get('/api/random', async (req: express.Request, res: express.Response) => {
         try {
             const tmdbKey = process.env.TMDB_API_KEY;
+            const omdbKey = process.env.OMDB_API_KEY;
+            const yearMin = req.query.yearMin ? String(req.query.yearMin) : '1950';
+            const yearMax = req.query.yearMax ? String(req.query.yearMax) : '2026';
+            const ratingMin = req.query.ratingMin ? String(req.query.ratingMin) : '0';
+            const ratingMax = req.query.ratingMax ? String(req.query.ratingMax) : '10';
             
             if (!tmdbKey) {
                 return res.status(500).json({ error: 'TMDB_API_KEY not configured in environment' });
@@ -71,7 +77,7 @@
                 const randomGenre = genres[Math.floor(Math.random() * genres.length)];
                 const genreId = randomGenre.id;
 
-                const discoverBase =
+                let discoverBase =
                 `https://api.themoviedb.org/3/discover/movie?api_key=${tmdbKey}` +
                 `&language=en-US` +
                 `&with_genres=${genreId}` +
@@ -81,7 +87,10 @@
                 `&with_runtime.gte=70` +
                 `&sort_by=popularity.desc` +
                 `&vote_count.gte=50` +
-                `&primary_release_date.gte=1950-01-01` +
+                `&primary_release_date.gte=${yearMin}-01-01` +
+                `&primary_release_date.lte=${yearMax}-12-31` +
+                `&vote_average.gte=${ratingMin}` +
+                `&vote_average.lte=${ratingMax}` +
                 `&include_adult=false`;
                 
                 const page1Resp = await fetch(`${discoverBase}&page=1`);
@@ -128,16 +137,39 @@
 
             const director = directors.length > 0 ? directors.join(', ') : '';
 
+            // Fetch OMDB ratings if key is available
+            let ratings: any[] = [];
+            if (omdbKey) {
+                const omdbResp = await fetch(`https://www.omdbapi.com/?apikey=${omdbKey}&t=${encodeURIComponent(movie.title)}&y=${movie.release_date?.split('-')[0] || ''}`);
+                if (omdbResp.ok) {
+                    const omdbData = await omdbResp.json();
+                    if (omdbData.Ratings && Array.isArray(omdbData.Ratings)) {
+                        ratings = omdbData.Ratings;
+                    }
+                }
+            }
+
             res.json({
                 title: movie.title,
                 release_date: movie.release_date,
                 director,
-                poster_url: posterUrl
+                poster_url: posterUrl,
+                ratings: ratings
             });
         } catch (error) {
             console.error('Error fetching random movie:', error);
             res.status(500).json({ error: 'Failed to fetch movie' });
         }
+    });
+
+    // YEARS - Generate available years from 1950 to current
+    app.get('/api/years', (_req: express.Request, res: express.Response) => {
+        const currentYear = new Date().getFullYear();
+        const years = [];
+        for (let year = currentYear; year >= 1950; year--) {
+            years.push(year);
+        }
+        res.json({ years });
     });
 
     app.listen(portti, () => {
