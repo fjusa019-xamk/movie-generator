@@ -1,0 +1,96 @@
+    import path from 'path';
+    import express from 'express';
+    import dotenv from 'dotenv';
+    import fs from 'fs';
+
+    dotenv.config();
+
+    const app : express.Application = express();
+    const portti : number = Number(process.env.PORT) || 3000;
+
+    const clientDir = path.resolve(__dirname, '../../client');
+    console.log('Serving static from:', clientDir, 'exists:', fs.existsSync(path.join(clientDir, 'index.html')));
+
+    app.use(express.static(clientDir));
+    app.get('/', (_req: express.Request, res: express.Response) => {
+    res.sendFile(path.join(clientDir, 'index.html'));
+    });
+
+
+    // GENRES
+    app.get('/api/genres', async (_req: express.Request, res: express.Response) => {
+        const tmdbKey = process.env.TMDB_API_KEY;
+        const url = `https://api.themoviedb.org/3/genre/movie/list?api_key=${tmdbKey}&language=en-US`;
+
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        res.json({ genres: data.genres });
+    });
+
+    // RANDOM
+    app.get('/api/random', async (_req: express.Request, res: express.Response) => {
+        const tmdbKey = process.env.TMDB_API_KEY;
+
+        const genresResp = await fetch (`https://api.themoviedb.org/3/genre/movie/list?api_key=${tmdbKey}&language=en-US`);
+        const genresData = await genresResp.json();
+        const genres = genresData.genres;
+
+        const randomGenre = genres[Math.floor(Math.random() * genres.length)];
+        const genreId = randomGenre.id;
+
+        const discoverBase =
+        `https://api.themoviedb.org/3/discover/movie?api_key=${tmdbKey}` +
+        `&language=en-US` +
+        `&with_genres=${genreId}` +
+        `&without_genres=10770,16,10402,10751,99` +
+        `&with_release_type=2|3` +
+        `&include_video=false` +
+        `&with_runtime.gte=70` +
+        `&sort_by=popularity.desc` +
+        `&vote_count.gte=50` +
+        `&primary_release_date.gte=1950-01-01` +
+        `&include_adult=false`;
+        const page1Resp = await fetch(`${discoverBase}&page=1`);
+        const page1Data = await page1Resp.json();
+        const totalPagesRaw = Number(page1Data.total_pages);
+        const totalPages = Math.max(1, Math.min(totalPagesRaw || 1, 500));
+        const randomPage = Math.floor(Math.random() * totalPages) + 1;
+
+        const pageResp = await fetch(`${discoverBase}&page=${randomPage}`);
+        const pageData = await pageResp.json(); 
+        const results = Array.isArray(pageData.results) ? pageData.results : [];
+        const movie = results[Math.floor(Math.random() * results.length)];
+
+        
+        const posterUrl = movie.poster_path
+        ? `https://image.tmdb.org/t/p/w185${movie.poster_path}`
+        : null;
+
+        
+        // 👉 Fetch credits to get the director(s)
+        const creditsResp = await fetch(`https://api.themoviedb.org/3/movie/${movie.id}/credits?api_key=${tmdbKey}&language=en-US`);
+        const creditsData = await creditsResp.json();
+        const crew = Array.isArray(creditsData.crew) ? creditsData.crew : [];
+
+        const directors = crew
+            .filter((person: any) => person.job === 'Director')
+            .map((person: any) => person.name);
+
+        // Join multiple directors if present; fall back to empty string if none
+        const director = directors.length > 0 ? directors.join(', ') : '';
+
+
+
+        res.json({
+            title: movie.title,
+            release_date: movie.release_date,
+            director,
+            poster_url: posterUrl
+        });
+
+    });
+
+    app.listen(portti, () => {
+        console.log(`Movie Generator is up and running at http://localhost:${portti}`);
+    })

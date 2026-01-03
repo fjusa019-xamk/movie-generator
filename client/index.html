@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Movie Generator</title>
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1>Random Movie Generator</h1>
+    </header>
+    <main>
+        
+        <h2 id="movieTitle"></h2>
+        <p id="director"></p>
+        <img id="poster" style="display:none; max-width:185px; border-radius:4px;" />
+        <button id="generateBtn" style="background-color: #D3D3D3; color: #1E1E1E; border: none;">GENERATE MOVIE</button>
+        
+        <script>
+            document.getElementById('generateBtn').onclick = async function() {
+                const response = await fetch('/api/random');
+                const data = await response.json();
+                const year = data.release_date ? data.release_date.split('-')[0] : '';
+
+                document.getElementById('movieTitle').textContent = year ? `${data.title} (${year})` : data.title;
+
+                
+                document.getElementById('director').textContent =
+                data.director ? `Director: ${data.director}` : '';
+
+
+                const posterEl = document.getElementById('poster');
+                
+                if (data.poster_url) {
+                    posterEl.src = data.poster_url;
+                    posterEl.style.display = 'block';
+                    } else {
+                    posterEl.style.display = 'none';
+                    }
+
+            };
+        </script>
+
+    </main>
+    <footer>
+        <p>This product uses the TMDb API but is not endorsed or certified by TMDb</p>
+    </footer>
+
+    
+</body>
+
+
+
+
+</html>
